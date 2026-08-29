@@ -1,3 +1,5 @@
 streamlit
 xhtml2pdf
 openpyxl
+pandas
+pypdf
