@@ -1,11 +1,12 @@
 import base64
 from io import BytesIO
 import os
-import smtplib
+
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
 
 import openpyxl
 import pandas as pd
@@ -36,6 +37,9 @@ telepon = "082131009200"
 email_pelamar = "adit.marhaendra@gmail.com"
 pendidikan = "S2 Teknologi Informasi - ISTTS"
 file_excel = "data_lamaran.xlsx"
+
+# App Password Google diset otomatis
+GMAIL_APP_PASSWORD_DEFAULT = "ssav gwlb tjwz exph"
 
 
 def dapatkan_html_ttd():
@@ -76,11 +80,28 @@ with tab1:
     email_tujuan = st.text_input(
         "Email Tujuan (HRD)", value="RECRUITMENT.PWS@MAYORA.CO.ID"
     )
-    subject_email = st.text_input(
-        "Subjek Email", value="UH WAREHOUSE_SIDOARJO"
+    domisili_subjek = st.text_input(
+        "Domisili Anda (Untuk Subjek Email)", value="SIDOARJO"
     )
 
-    default_body = f"""Yth. Tim Recruitment / HRD {perusahaan}
+    gmail_app_password = st.text_input(
+        "🔑 Gmail App Password",
+        value=GMAIL_APP_PASSWORD_DEFAULT,
+        type="password",
+    )
+
+    submit = st.form_submit_button("🚀 Generate PDF & Kirim Email Otomatis")
+
+  if submit:
+    if not perusahaan or not posisi:
+      st.error("Mohon isi Nama Perusahaan dan Posisi!")
+    else:
+      # Subjek email terbuat otomatis sesuai Posisi & Domisili
+      posisi_code = "UH WAREHOUSE" if "WAREHOUSE" in posisi.upper() else posisi.upper()
+      subjek_email = f"{posisi_code}_{domisili_subjek.upper()}"
+
+      # Body email dinamis otomatis mengikuti Nama Perusahaan & Posisi yang diisi
+      body_email = f"""Yth. Tim Recruitment / HRD {perusahaan}
 di {lokasi}
 
 Dengan hormat,
@@ -89,7 +110,7 @@ Sehubungan dengan informasi lowongan pekerjaan yang dibuka oleh {perusahaan}, me
 
 Saya merupakan lulusan {pendidikan} dengan pengalaman kerja lebih dari 8 tahun di bidang Supply Chain Management (SCM), Data Control, dan Application Support pada industri FMCG. Pada posisi saya saat ini sebagai Subsection SCM Head Control Tower (SPV), saya terbiasa memimpin monitoring operasional gudang, validasi sistem inventory, audit stock opname, pengelolaan retur, hingga koordinasi pengiriman rantai pasok.
 
-Berdasarkan latar belakang dan keahlian yang saya miliki, saya meyakini dapat memberikan kontribusi optimal dalam menjaga akurasi inventory, kelancaran unloading/buffer stock, serta penerapan standar 5R, GMP, Safety, dan FSSC 22000 di area gudang perusahaan. Saya juga bersedia untuk mengikuti tahapan interview onsite/offline maupun bekerja dengan sistem shift.
+Berdasarkan latar belakang dan keahlian yang saya miliki, saya meyakini dapat memberikan kontribusi optimal dalam mendukung operasional {perusahaan} pada posisi {posisi}. Saya juga bersedia untuk mengikuti tahapan interview onsite/offline maupun bekerja dengan sistem shift.
 
 Sebagai bahan pertimbangan, bersama email ini saya lampirkan dokumen Surat Lamaran Kerja dan Curriculum Vitae (CV) dalam bentuk satu berkas PDF terpadu.
 
@@ -99,22 +120,6 @@ Hormat saya,
 {nama_pelamar}
 📞 {telepon} | ✉️ {email_pelamar}"""
 
-    body_email = st.text_area("Isi Body Email", value=default_body, height=220)
-
-    # Input Sandi Aplikasi Gmail jika ingin kirim via SMTP
-    gmail_app_password = st.text_input(
-        "🔑 Gmail App Password Anda (Opsional - Untuk Kirim Email Langsung dari"
-        " App)",
-        type="password",
-        help="Password aplikasi 16 digit dari akun Google Anda",
-    )
-
-    submit = st.form_submit_button("🚀 Generate PDF & Opsi Kirim Email")
-
-  if submit:
-    if not perusahaan or not posisi:
-      st.error("Mohon isi Nama Perusahaan dan Posisi!")
-    else:
       # A. Generate PDF Surat Lamaran
       html_content = f"""
             <!DOCTYPE html>
@@ -223,24 +228,22 @@ Hormat saya,
 
       st.success("✅ Dokumen PDF Berhasil Dibuat!")
 
-      # D. Tombol Download & Pengiriman Email
-      col1, col2 = st.columns(2)
-      with col1:
-        st.download_button(
-            label="📥 Download PDF Lamaran",
-            data=final_pdf_data,
-            file_name=nama_pdf,
-            mime="application/pdf",
-            use_container_width=True,
-        )
+      # D. Tombol Download
+      st.download_button(
+          label="📥 Download PDF Lamaran",
+          data=final_pdf_data,
+          file_name=nama_pdf,
+          mime="application/pdf",
+          use_container_width=True,
+      )
 
-      # E. Logika Pengiriman Email via SMTP
+      # E. Pengiriman Email Otomatis via Server (SMTP)
       if gmail_app_password:
         try:
           msg = MIMEMultipart()
           msg["From"] = email_pelamar
           msg["To"] = email_tujuan
-          msg["Subject"] = subject_email
+          msg["Subject"] = subjek_email
           msg.attach(MIMEText(body_email, "plain"))
 
           part = MIMEBase("application", "octet-stream")
@@ -253,12 +256,14 @@ Hormat saya,
 
           server = smtplib.SMTP("smtp.gmail.com", 587)
           server.starttls()
-          server.login(email_pelamar, gmail_app_password)
+          server.login(email_pelamar, gmail_app_password.replace(" ", ""))
           server.sendmail(email_pelamar, email_tujuan, msg.as_string())
           server.quit()
 
           st.balloons()
-          st.success(f"📧 Email berhasil terkirim otomatis ke {email_tujuan}!")
+          st.success(
+              f"🚀 Email & Lampiran PDF Berhasil Terkirim ke {email_tujuan}!"
+          )
         except Exception as e:
           st.error(f"Gagal mengirim email secara otomatis: {e}")
 
