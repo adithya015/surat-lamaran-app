@@ -1,12 +1,11 @@
 import base64
 from io import BytesIO
 import os
-
+import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import smtplib
 
 import openpyxl
 import pandas as pd
@@ -26,19 +25,31 @@ st.set_page_config(
     page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
+# Session State untuk menampung preview
+if "pdf_ready" not in st.session_state:
+  st.session_state.pdf_ready = False
+if "final_pdf_data" not in st.session_state:
+  st.session_state.final_pdf_data = None
+if "nama_pdf" not in st.session_state:
+  st.session_state.nama_pdf = ""
+if "email_tujuan" not in st.session_state:
+  st.session_state.email_tujuan = ""
+if "subjek_email" not in st.session_state:
+  st.session_state.subjek_email = ""
+if "body_email" not in st.session_state:
+  st.session_state.body_email = ""
+
 tab1, tab2 = st.tabs(
-    ["📝 Buat Surat & Kirim Email", "📊 Rekap Data Lamaran"]
+    ["📝 Buat Surat & Preview Email", "📊 Rekap Data Lamaran"]
 )
 
-# Data Profil Pelamar (Default)
+# Data Profil Pelamar (Sesuai CV)
 nama_pelamar = "Adithya Marhaendra Kusuma"
 alamat_pelamar = "Perumahan Mutiara Citra Asri Blok D4 No 6 Candi Sidoarjo"
 telepon = "082131009200"
 email_pelamar = "adit.marhaendra@gmail.com"
 pendidikan = "S2 Teknologi Informasi - ISTTS"
 file_excel = "data_lamaran.xlsx"
-
-# App Password Google diset otomatis
 GMAIL_APP_PASSWORD_DEFAULT = "ssav gwlb tjwz exph"
 
 
@@ -58,7 +69,7 @@ def dapatkan_html_ttd():
   return '<div style="height:55px;">[Tanda Tangan]</div>'
 
 
-# ================= TAB 1: FORM SURAT & EMAIL =================
+# ================= TAB 1: FORM SURAT & PREVIEW EMAIL =================
 with tab1:
   st.subheader("1. Detail Lamaran Kerja")
 
@@ -75,7 +86,7 @@ with tab1:
     tanggal = st.text_input("Tanggal Surat", value="29 Agustus 2026")
 
     st.divider()
-    st.subheader("2. Setting Pengiriman Email")
+    st.subheader("2. Tujuan Pengiriman Email")
 
     email_tujuan = st.text_input(
         "Email Tujuan (HRD)", value="RECRUITMENT.PWS@MAYORA.CO.ID"
@@ -90,35 +101,46 @@ with tab1:
         type="password",
     )
 
-    submit = st.form_submit_button("🚀 Generate PDF & Kirim Email Otomatis")
+    submit_generate = st.form_submit_button(
+        "🔍 Generate PDF & Preview Email"
+    )
 
-  if submit:
+  if submit_generate:
     if not perusahaan or not posisi:
       st.error("Mohon isi Nama Perusahaan dan Posisi!")
     else:
-      # Subjek email terbuat otomatis sesuai Posisi & Domisili
-      posisi_code = "UH WAREHOUSE" if "WAREHOUSE" in posisi.upper() else posisi.upper()
-      subjek_email = f"{posisi_code}_{domisili_subjek.upper()}"
+      # Format Subjek Otomatis
+      posisi_code = (
+          "UH WAREHOUSE" if "WAREHOUSE" in posisi.upper() else posisi.upper()
+      )
+      subjek_draft = f"{posisi_code}_{domisili_subjek.upper()}"
 
-      # Body email dinamis otomatis mengikuti Nama Perusahaan & Posisi yang diisi
-      body_email = f"""Yth. Tim Recruitment / HRD {perusahaan}
+      # Body Email Dinamis & Spesifik Keterampilan CV (Sari Roti, SCM, Best SCM 2025, IT)
+      body_draft = f"""Yth. Tim Recruitment / HRD {perusahaan}
 di {lokasi}
 
 Dengan hormat,
 
 Sehubungan dengan informasi lowongan pekerjaan yang dibuka oleh {perusahaan}, melalui email ini saya bermaksud untuk mengajukan diri guna mengisi posisi {posisi}.
 
-Saya merupakan lulusan {pendidikan} dengan pengalaman kerja lebih dari 8 tahun di bidang Supply Chain Management (SCM), Data Control, dan Application Support pada industri FMCG. Pada posisi saya saat ini sebagai Subsection SCM Head Control Tower (SPV), saya terbiasa memimpin monitoring operasional gudang, validasi sistem inventory, audit stock opname, pengelolaan retur, hingga koordinasi pengiriman rantai pasok.
+Saya merupakan lulusan S2 Teknologi Informasi dari ISTTS (IPK 3.88) dan S1 Teknik Informatika STT PLN dengan pengalaman kerja lebih dari 8 tahun di bidang Supply Chain Management (SCM), Data Control, serta IT & Application Support pada industri FMCG. Saat ini saya menjabat sebagai Subsection SCM Head Control Tower (SPV) di PT Indosari Niaga Nusantara (Sari Roti Group), dengan fokus keahlian:
+- Monitoring operasional gudang DC, distributor, agen, dan sinkronisasi data inventaris.
+- Audit stock opname, validasi kesesuaian fisik vs sistem (GR/DC), pengelolaan retur, dan moving stock.
+- Evaluasi indikator kinerja rantai pasok seperti Fulfillment Delivery dan On Time Arrival (OTA).
+- Pengolahan data analitis berbasis Excel (Pivot Table, VLOOKUP), SQL/Python, serta penyusunan SOP & manual sistem.
 
-Berdasarkan latar belakang dan keahlian yang saya miliki, saya meyakini dapat memberikan kontribusi optimal dalam mendukung operasional {perusahaan} pada posisi {posisi}. Saya juga bersedia untuk mengikuti tahapan interview onsite/offline maupun bekerja dengan sistem shift.
+Atas komitmen dan kinerja operasional tersebut, saya dianugerahi penghargaan 'Best SCM Indonesia 2025 - Plant Pasuruan'. Dengan latar belakang ini, saya yakin mampu memberikan kontribusi optimal dalam mendukung kelancaran operasional gudang, pengelolaan buffer stock, dan akurasi inventory di {perusahaan}.
 
-Sebagai bahan pertimbangan, bersama email ini saya lampirkan dokumen Surat Lamaran Kerja dan Curriculum Vitae (CV) dalam bentuk satu berkas PDF terpadu.
+Sebagai bahan pertimbangan, bersama email ini saya lampirkan berkas terpadu Surat Lamaran Kerja dan Curriculum Vitae (CV) dalam format PDF.
 
-Besar harapan saya untuk diberikan kesempatan mengikuti tahapan wawancara agar dapat menjelaskan kualifikasi dan potensi saya secara lebih mendalam. Atas perhatian dan kesempatan yang Bapak/Ibu berikan, saya ucapkan terima kasih.
+Saya bersedia untuk mengikuti tahapan interview secara onsite/offline maupun sistem kerja shift. Besar harapan saya untuk diberikan kesempatan wawancara agar dapat menjelaskan kualifikasi saya secara lebih mendalam.
+
+Atas perhatian dan kesempatan yang Bapak/Ibu berikan, saya ucapkan terima kasih.
 
 Hormat saya,
 {nama_pelamar}
-📞 {telepon} | ✉️ {email_pelamar}"""
+📞 {telepon} | ✉️ {email_pelamar}
+📍 {alamat_pelamar}"""
 
       # A. Generate PDF Surat Lamaran
       html_content = f"""
@@ -155,7 +177,7 @@ Hormat saya,
                         <tr><td class="label">No. Telepon / WA</td><td class="colon">:</td><td>{telepon}</td></tr>
                         <tr><td class="label">Email</td><td class="colon">:</td><td>{email_pelamar}</td></tr>
                     </table>
-                    <p>Saat ini saya dalam kondisi kesehatan yang sangat baik dan siap untuk bekerja keras serta berkontribusi positif bagi perusahaan. Saya memiliki latar belakang pendidikan dan pengalaman kerja selama lebih dari 8 tahun di bidang IT, SCM, dan Data Control yang saya yakini dapat mendukung kinerja saya pada posisi tersebut.</p>
+                    <p>Saat ini saya dalam kondisi kesehatan yang sangat baik dan siap untuk bekerja keras serta berkontribusi positif bagi perusahaan. Saya memiliki latar belakang pendidikan S2 Teknologi Informasi serta pengalaman kerja lebih dari 8 tahun di bidang SCM, Data Control, dan IT Support yang saya yakini dapat mendukung kinerja operasional pada posisi tersebut.</p>
                     <p>Sebagai bahan pertimbangan Bapak/Ibu, bersama surat ini turut saya lampirkan:</p>
                     <ol>
                         <li>Curriculum Vitae (CV)</li>
@@ -201,7 +223,9 @@ Hormat saya,
       else:
         final_pdf_data = surat_buffer.getvalue()
 
-      # C. Rekap ke Excel
+      nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
+
+      # C. Rekap Ke Excel
       if os.path.exists(file_excel):
         wb = openpyxl.load_workbook(file_excel)
         ws = (
@@ -222,50 +246,90 @@ Hormat saya,
             "Nama File PDF",
         ])
 
-      nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
-      ws.append([tanggal, perusahaan, lokasi, posisi, "Terkirim", nama_pdf])
+      ws.append([
+          tanggal,
+          perusahaan,
+          lokasi,
+          posisi,
+          "Draft Prepared",
+          nama_pdf,
+      ])
       wb.save(file_excel)
 
-      st.success("✅ Dokumen PDF Berhasil Dibuat!")
+      # D. Simpan ke Session State untuk Preview
+      st.session_state.pdf_ready = True
+      st.session_state.final_pdf_data = final_pdf_data
+      st.session_state.nama_pdf = nama_pdf
+      st.session_state.email_tujuan = email_tujuan
+      st.session_state.subjek_email = subjek_draft
+      st.session_state.body_email = body_draft
+      st.session_state.app_password = gmail_app_password
 
-      # D. Tombol Download
+  # ================= AREA PREVIEW & PENGIRIMAN MANUAL =================
+  if st.session_state.pdf_ready:
+    st.divider()
+    st.success(
+        "✅ Dokumen PDF Berhasil Dibuat! Silakan periksa atau ubah draft email"
+        " di bawah ini sebelum dikirim."
+    )
+
+    col_dl, col_blank = st.columns([1, 1])
+    with col_dl:
       st.download_button(
-          label="📥 Download PDF Lamaran",
-          data=final_pdf_data,
-          file_name=nama_pdf,
+          label="📥 Download & Cek File PDF",
+          data=st.session_state.final_pdf_data,
+          file_name=st.session_state.nama_pdf,
           mime="application/pdf",
           use_container_width=True,
       )
 
-      # E. Pengiriman Email Otomatis via Server (SMTP)
-      if gmail_app_password:
+    st.subheader("📧 Form Preview & Edit Email")
+    final_to = st.text_input(
+        "Email Tujuan (HRD):", value=st.session_state.email_tujuan
+    )
+    final_subject = st.text_input(
+        "Subjek Email:", value=st.session_state.subjek_email
+    )
+    final_body = st.text_area(
+        "Isi Body Email (Bisa Diedit):",
+        value=st.session_state.body_email,
+        height=300,
+    )
+
+    if st.button("📤 Kirim Email Sekarang", type="primary"):
+      if not st.session_state.app_password:
+        st.error("Gmail App Password belum terisi!")
+      else:
         try:
           msg = MIMEMultipart()
           msg["From"] = email_pelamar
-          msg["To"] = email_tujuan
-          msg["Subject"] = subjek_email
-          msg.attach(MIMEText(body_email, "plain"))
+          msg["To"] = final_to
+          msg["Subject"] = final_subject
+          msg.attach(MIMEText(final_body, "plain"))
 
           part = MIMEBase("application", "octet-stream")
-          part.set_payload(final_pdf_data)
+          part.set_payload(st.session_state.final_pdf_data)
           encoders.encode_base64(part)
           part.add_header(
-              "Content-Disposition", f"attachment; filename={nama_pdf}"
+              "Content-Disposition",
+              f"attachment; filename={st.session_state.nama_pdf}",
           )
           msg.attach(part)
 
           server = smtplib.SMTP("smtp.gmail.com", 587)
           server.starttls()
-          server.login(email_pelamar, gmail_app_password.replace(" ", ""))
-          server.sendmail(email_pelamar, email_tujuan, msg.as_string())
+          server.login(
+              email_pelamar, st.session_state.app_password.replace(" ", "")
+          )
+          server.sendmail(email_pelamar, final_to, msg.as_string())
           server.quit()
 
           st.balloons()
           st.success(
-              f"🚀 Email & Lampiran PDF Berhasil Terkirim ke {email_tujuan}!"
+              f"🚀 Email & Berkas Lampiran PDF Berhasil Terkirim ke {final_to}!"
           )
         except Exception as e:
-          st.error(f"Gagal mengirim email secara otomatis: {e}")
+          st.error(f"Gagal mengirim email: {e}")
 
 # ================= TAB 2: REKAP DATA =================
 with tab2:
