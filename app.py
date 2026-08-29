@@ -129,11 +129,11 @@ Saya merupakan lulusan S2 Teknologi Informasi dari ISTTS (IPK 3.88) dan S1 Tekni
 - Evaluasi indikator kinerja rantai pasok seperti Fulfillment Delivery dan On Time Arrival (OTA).
 - Pengolahan data analitis berbasis Excel (Pivot Table, VLOOKUP), SQL/Python, serta penyusunan SOP & manual sistem.
 
-Atas komitmen dan kinerja operasional tersebut, saya dianugerahi penghargaan 'Best SCM Indonesia 2025 - Plant Pasuruan'. Dengan latar belakang ini, saya yakin mampu memberikan kontribusi optimal dalam mendukung kelancaran operasional gudang, pengelolaan buffer stock, dan akurasi inventory di {perusahaan}.
+Atas komitmen dan kinerja operasional tersebut, saya dianugerahi penghargaan 'Best SCM Indonesia 2025 - Plant Pasuruan'. Dengan latar belakang ini, saya yakin mampu memberikan kontribusi optimal dalam mendukung kelancaran operasional di {perusahaan}.
 
 Sebagai bahan pertimbangan, bersama email ini saya lampirkan berkas terpadu Surat Lamaran Kerja dan Curriculum Vitae (CV) dalam format PDF.
 
-Saya bersedia untuk mengikuti tahapan interview secara onsite/offline maupun sistem kerja shift. Besar harapan saya untuk diberikan kesempatan wawancara agar dapat menjelaskan kualifikasi saya secara lebih mendalam.
+Saya bersedia untuk mengikuti tahapan interview secara onsite/offline. Besar harapan saya untuk diberikan kesempatan wawancara agar dapat menjelaskan kualifikasi saya secara lebih mendalam.
 
 Atas perhatian dan kesempatan yang Bapak/Ibu berikan, saya ucapkan terima kasih.
 
