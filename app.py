@@ -3,14 +3,23 @@ from io import BytesIO
 import os
 import openpyxl
 import pandas as pd
-from pypdf import PdfMerger
 import streamlit as st
 from xhtml2pdf import pisa
+
+# Safe Import untuk PDF Merger (Anti-Crash jika library baru dipasang)
+try:
+  from pypdf import PdfMerger
+except ImportError:
+  try:
+    from PyPDF2 import PdfMerger
+  except ImportError:
+    PdfMerger = None
 
 st.set_page_config(
     page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
+# Tab Menu Navigasi
 tab1, tab2 = st.tabs(["📝 Buat Surat + Merge CV", "📊 Rekap Data Lamaran"])
 
 # Data Profil Pelamar (Default)
@@ -23,7 +32,13 @@ file_excel = "data_lamaran.xlsx"
 
 
 def dapatkan_html_ttd():
-  opsi = ["ttd_hd_white.png", "ttd.png", "ttd.jpg"]
+  opsi = [
+      "ttd_hd_white.png",
+      "ttd_hd_transparent.png",
+      "ttd.png",
+      "ttd.jpg",
+      "ttd.PNG",
+  ]
   for f in opsi:
     if os.path.exists(f):
       with open(f, "rb") as img_file:
@@ -36,7 +51,6 @@ def dapatkan_html_ttd():
 with tab1:
   st.subheader("Form Lamaran Kerja")
 
-  # Upload CV Opsional (Jika tidak diupload, otomatis memakai file cv.pdf bawaan)
   uploaded_cv = st.file_uploader(
       "📄 Upload File CV PDF Baru (Opsional)", type=["pdf"]
   )
@@ -47,21 +61,21 @@ with tab1:
     )
     lokasi = st.text_input("Lokasi / Kota", placeholder="Surabaya")
     posisi = st.text_input("Posisi Dilamar", placeholder="IT Manager")
-    tanggal = st.text_input("Tanggal Surat", placeholder="28 Agustus 2026")
+    tanggal = st.text_input("Tanggal Surat", placeholder="29 Agustus 2026")
     submit = st.form_submit_button("🚀 Generate PDF Lengkap (Surat + CV)")
 
   if submit:
     if not perusahaan or not posisi:
       st.error("Mohon isi Nama Perusahaan dan Posisi!")
     else:
-      # A. Generate Surat Lamaran (Halaman 1)
+      # 1. Generate Surat Lamaran (HTML -> PDF 1 Halaman)
       html_content = f"""
             <!DOCTYPE html>
             <html>
             <head>
                 <style>
                     @page {{ size: A4; margin: 15mm 20mm 15mm 20mm; }}
-                    body {{ font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.35; }}
+                    body {{ font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.35; color: #000; }}
                     p {{ margin: 6px 0; }}
                     .header {{ text-align: right; margin-bottom: 12px; }}
                     .recipient {{ margin-bottom: 15px; }}
@@ -71,6 +85,7 @@ with tab1:
                     .bio-table td.label {{ width: 26%; }}
                     .bio-table td.colon {{ width: 3%; }}
                     ol {{ margin-top: 2px; margin-bottom: 6px; padding-left: 22px; }}
+                    ol li {{ padding: 1px 0; }}
                     .signature-table {{ width: 100%; margin-top: 15px; }}
                 </style>
             </head>
@@ -115,24 +130,36 @@ with tab1:
       pisa.CreatePDF(html_content, dest=surat_buffer)
       surat_buffer.seek(0)
 
-      # B. Penggabungan PDF Surat + CV
-      merger = PdfMerger()
-      merger.append(surat_buffer)  # Hal 1: Surat Lamaran
-
+      # 2. Penggabungan PDF (Surat + CV)
       cv_terpakai = False
-      if uploaded_cv is not None:
-        merger.append(BytesIO(uploaded_cv.read()))
-        cv_terpakai = True
-      elif os.path.exists("cv.pdf"):
-        merger.append("cv.pdf")
-        cv_terpakai = True
 
-      final_buffer = BytesIO()
-      merger.write(final_buffer)
-      merger.close()
-      final_pdf_data = final_buffer.getvalue()
+      if PdfMerger is None:
+        st.warning(
+            "⚠️ Library PDF Merger belum aktif di server. Menampilkan Surat"
+            " Lamaran saja."
+        )
+        final_pdf_data = surat_buffer.getvalue()
+      else:
+        merger = PdfMerger()
+        merger.append(surat_buffer)
 
-      # C. Simpan ke Rekap Excel
+        # Urutan prioritas pencarian file CV
+        if uploaded_cv is not None:
+          merger.append(BytesIO(uploaded_cv.read()))
+          cv_terpakai = True
+        elif os.path.exists("cv.pdf"):
+          merger.append("cv.pdf")
+          cv_terpakai = True
+        elif os.path.exists("CV Adithya Marhaendra Kusuma ats.pdf"):
+          merger.append("CV Adithya Marhaendra Kusuma ats.pdf")
+          cv_terpakai = True
+
+        final_buffer = BytesIO()
+        merger.write(final_buffer)
+        merger.close()
+        final_pdf_data = final_buffer.getvalue()
+
+      # 3. Simpan Log Data ke Excel
       if os.path.exists(file_excel):
         wb = openpyxl.load_workbook(file_excel)
         ws = (
@@ -157,17 +184,17 @@ with tab1:
       ws.append([tanggal, perusahaan, lokasi, posisi, "Terkirim", nama_pdf])
       wb.save(file_excel)
 
-      # Status Pesan
+      # Notifikasi & Tombol Download
       if cv_terpakai:
         st.success("✅ Surat Lamaran + CV Berhasil Digabungkan!")
       else:
-        st.warning(
-            "⚠️ File CV (`cv.pdf`) tidak ditemukan di folder/server, hanya Surat"
-            " Lamaran yang dibuat."
+        st.info(
+            "ℹ️ Surat Lamaran Berhasil Dibuat (File CV belum terdeteksi di"
+            " server / di-upload)."
         )
 
       st.download_button(
-          label="📥 Download Paket Lamaran PDF (Surat + CV)",
+          label="📥 Download Paket Lamaran PDF",
           data=final_pdf_data,
           file_name=nama_pdf,
           mime="application/pdf",
