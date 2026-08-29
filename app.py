@@ -3,17 +3,17 @@ from io import BytesIO
 import os
 import openpyxl
 import pandas as pd
+from pypdf import PdfMerger
 import streamlit as st
 from xhtml2pdf import pisa
 
 st.set_page_config(
-    page_title="Generator Surat Lamaran", page_icon="📝", layout="centered"
+    page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
-# Pilihan Menu Tab
-tab1, tab2 = st.tabs(["📝 Buat Surat", "📊 Rekap Data Lamaran"])
+tab1, tab2 = st.tabs(["📝 Buat Surat + Merge CV", "📊 Rekap Data Lamaran"])
 
-# Data Pelamar (Default)
+# Data Profil Pelamar (Default)
 nama_pelamar = "Adithya Marhaendra Kusuma"
 alamat_pelamar = "Perumahan Mutiara Citra Asri Blok D4 No 6 Candi Sidoarjo"
 telepon = "082131009200"
@@ -32,9 +32,15 @@ def dapatkan_html_ttd():
   return '<div style="height:55px;">[Tanda Tangan]</div>'
 
 
-# ================= TAB 1: FORM SURAT =================
+# ================= TAB 1: FORM SURAT & MERGE CV =================
 with tab1:
-  st.subheader("Form Surat Lamaran")
+  st.subheader("Form Lamaran Kerja")
+
+  # Upload CV Opsional (Jika tidak diupload, otomatis memakai file cv.pdf bawaan)
+  uploaded_cv = st.file_uploader(
+      "📄 Upload File CV PDF Baru (Opsional)", type=["pdf"]
+  )
+
   with st.form("form_surat"):
     perusahaan = st.text_input(
         "Nama Perusahaan", placeholder="PT Example Indonesia"
@@ -42,12 +48,13 @@ with tab1:
     lokasi = st.text_input("Lokasi / Kota", placeholder="Surabaya")
     posisi = st.text_input("Posisi Dilamar", placeholder="IT Manager")
     tanggal = st.text_input("Tanggal Surat", placeholder="28 Agustus 2026")
-    submit = st.form_submit_button("🚀 Buat Surat PDF")
+    submit = st.form_submit_button("🚀 Generate PDF Lengkap (Surat + CV)")
 
   if submit:
     if not perusahaan or not posisi:
       st.error("Mohon isi Nama Perusahaan dan Posisi!")
     else:
+      # A. Generate Surat Lamaran (Halaman 1)
       html_content = f"""
             <!DOCTYPE html>
             <html>
@@ -104,11 +111,28 @@ with tab1:
             </body>
             </html>
             """
-      pdf_buffer = BytesIO()
-      pisa.CreatePDF(html_content, dest=pdf_buffer)
-      pdf_data = pdf_buffer.getvalue()
+      surat_buffer = BytesIO()
+      pisa.CreatePDF(html_content, dest=surat_buffer)
+      surat_buffer.seek(0)
 
-      # Simpan / Update File Excel
+      # B. Penggabungan PDF Surat + CV
+      merger = PdfMerger()
+      merger.append(surat_buffer)  # Hal 1: Surat Lamaran
+
+      cv_terpakai = False
+      if uploaded_cv is not None:
+        merger.append(BytesIO(uploaded_cv.read()))
+        cv_terpakai = True
+      elif os.path.exists("cv.pdf"):
+        merger.append("cv.pdf")
+        cv_terpakai = True
+
+      final_buffer = BytesIO()
+      merger.write(final_buffer)
+      merger.close()
+      final_pdf_data = final_buffer.getvalue()
+
+      # C. Simpan ke Rekap Excel
       if os.path.exists(file_excel):
         wb = openpyxl.load_workbook(file_excel)
         ws = (
@@ -129,14 +153,22 @@ with tab1:
             "Nama File PDF",
         ])
 
-      nama_pdf = f"Surat_Lamaran_{perusahaan.replace(' ', '_')}.pdf"
+      nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
       ws.append([tanggal, perusahaan, lokasi, posisi, "Terkirim", nama_pdf])
       wb.save(file_excel)
 
-      st.success("✅ Surat PDF Berhasil Dibuat & Data Rekap Diperbarui!")
+      # Status Pesan
+      if cv_terpakai:
+        st.success("✅ Surat Lamaran + CV Berhasil Digabungkan!")
+      else:
+        st.warning(
+            "⚠️ File CV (`cv.pdf`) tidak ditemukan di folder/server, hanya Surat"
+            " Lamaran yang dibuat."
+        )
+
       st.download_button(
-          label="📥 Download Surat PDF",
-          data=pdf_data,
+          label="📥 Download Paket Lamaran PDF (Surat + CV)",
+          data=final_pdf_data,
           file_name=nama_pdf,
           mime="application/pdf",
       )
@@ -144,13 +176,11 @@ with tab1:
 # ================= TAB 2: REKAP DATA =================
 with tab2:
   st.subheader("📊 Histori Lamaran Kerja")
-
   if os.path.exists(file_excel):
     df = pd.read_excel(file_excel)
     st.metric(label="Total Lamaran Dibuat", value=len(df))
     st.dataframe(df, use_container_width=True)
 
-    # Download File Excel dari HP
     with open(file_excel, "rb") as f:
       st.download_button(
           label="📥 Download Rekap Excel (.xlsx)",
