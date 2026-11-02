@@ -4,3 +4,4 @@ openpyxl
 pandas
 pypdf
 PyPDF2
+requests
