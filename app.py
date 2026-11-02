@@ -127,4 +127,52 @@ Sehubungan dengan informasi lowongan pekerjaan yang dibuka oleh {perusahaan}, me
 Saya merupakan lulusan {pendidikan} dan S1 Teknik Informatika dengan latar belakang utama di bidang IT & Application Support selama lebih dari 8 tahun. Berkarir di PT Indosari Niaga Nusantara (Sari Roti Group), fokus utama saya adalah mengelola aplikasi operasional bisnis, melakukan validasi sistem, serta memastikan keandalan data untuk mendukung kelancaran proses bisnis.
 
 Keahlian utama saya berfokus pada integrasi teknologi IT dengan kebutuhan operasional lintas divisi:
-- IT & Application Support: Troubleshooting sistem/aplikasi operasional,
+- IT & Application Support: Troubleshooting sistem/aplikasi operasional, konfigurasi master data (data hygiene), pembuatan SOP, serta edukasi/pelatihan teknis pengguna.
+- Data Control & Analytics: Pengolahan data analitis (Excel Advanced, SQL, Python), sinkronisasi data antar-sistem (Distributor, Agen, Gudang), serta pengawasan fulfillment dan retur.
+- Bridging IT & Business Process: Pengalaman menjembatani sistem IT dengan kebutuhan Supply Chain, pergudangan (inventory & stock opname), internal audit data, hingga pencatatan transaksi penjualan/sales.
+
+Atas kontribusi dalam menyelaraskan sistem teknologi dengan efisiensi operasional, saya dianugerahi penghargaan 'Best SCM Indonesia 2025 - Plant Pasuruan'. Dengan fondasi IT yang kuat serta fleksibilitas untuk berkembang di area pergudangan, SCM, audit internal, maupun business development, saya meyakini dapat memberikan dampak positif bagi {perusahaan}.
+
+Sebagai bahan pertimbangan, bersama email ini saya lampirkan berkas Surat Lamaran Kerja dan Curriculum Vitae (CV) dalam format PDF terpadu. Saya bersedia mengikuti tahapan interview secara onsite/offline maupun sistem kerja shift.
+
+Besar harapan saya untuk diberikan kesempatan wawancara agar dapat mendiskusikan kualifikasi saya secara lebih rinci. Atas perhatian Bapak/Ibu, saya ucapkan terima kasih.
+
+Hormat saya,
+{nama_pelamar}
+📞 {telepon} | ✉️ {email_pelamar}
+📍 {alamat_pelamar}"""
+
+      # A. Generate PDF Surat
+      html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    @page {{ size: A4; margin: 15mm 20mm 15mm 20mm; }}
+                    body {{ font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.35; color: #000; }}
+                    p {{ margin: 6px 0; }}
+                    .header {{ text-align: right; margin-bottom: 12px; }}
+                    .recipient {{ margin-bottom: 15px; }}
+                    .content {{ text-align: justify; }}
+                    .bio-table {{ width: 100%; margin-left: 15px; margin-top: 4px; margin-bottom: 8px; }}
+                    .bio-table td {{ padding: 1px 0; vertical-align: top; }}
+                    .bio-table td.label {{ width: 26%; }}
+                    .bio-table td.colon {{ width: 3%; }}
+                    ol {{ margin-top: 2px; margin-bottom: 6px; padding-left: 22px; }}
+                    ol li {{ padding: 1px 0; }}
+                    .signature-table {{ width: 100%; margin-top: 15px; }}
+                </style>
+            </head>
+            <body>
+                <div class="header">Surabaya, {tanggal}</div>
+                <div class="recipient">Yth. Bapak/Ibu HRD<br><strong>{perusahaan}</strong><br>di {lokasi}</div>
+                <div class="content">
+                    <p>Dengan hormat,</p>
+                    <p>Berdasarkan informasi lowongan pekerjaan yang saya peroleh, bahwa <strong>{perusahaan}</strong> sedang membuka lowongan pekerjaan. Melalui surat ini saya bermaksud menyampaikan ketertarikan saya untuk melamar pekerjaan pada posisi <strong>{posisi}</strong>.</p>
+                    <p>Berikut adalah biodata singkat saya:</p>
+                    <table class="bio-table">
+                        <tr><td class="label">Nama</td><td class="colon">:</td><td>{nama_pelamar}</td></tr>
+                        <tr><td class="label">Pendidikan Terakhir</td><td class="colon">:</td><td>{pendidikan}</td></tr>
+                        <tr><td class="label">Alamat Domisili</td><td class="colon">:</td><td>{alamat_pelamar}</td></tr>
+                        <tr><td class="label">No. Telepon / WA</td><td class="colon">:</td><td>{telepon}</td></tr>
+                        <tr><td class="label">Email</td><td class="colon">:
