@@ -26,11 +26,11 @@ st.set_page_config(
     page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
-# Link URL Google Apps Script Web App
+# Link URL Google Apps Script Web App Anda
 GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
 
 
-# Fungsi Ter-cache agar Tidak Mengunci (Freeze) Halaman Utama saat Loading
+# Fungsi Ter-cache agar aplikasi tidak freeze/loading muter lama saat dipanggil
 @st.cache_data(ttl=15, show_spinner=False)
 def ambil_data_sheets(url):
   try:
@@ -42,7 +42,7 @@ def ambil_data_sheets(url):
   return None
 
 
-# Session State untuk Preview & Rekap
+# Session State untuk Preview & Rekap Data
 if "pdf_ready" not in st.session_state:
   st.session_state.pdf_ready = False
 if "final_pdf_data" not in st.session_state:
@@ -292,4 +292,24 @@ Hormat saya,
           msg.attach(MIMEText(final_body, "plain"))
 
           part = MIMEBase("application", "octet-stream")
-          part.set_
+          part.set_payload(st.session_state.final_pdf_data)
+          encoders.encode_base64(part)
+          part.add_header(
+              "Content-Disposition",
+              f"attachment; filename={st.session_state.nama_pdf}",
+          )
+          msg.attach(part)
+
+          server = smtplib.SMTP("smtp.gmail.com", 587)
+          server.starttls()
+          server.login(
+              email_pelamar, st.session_state.app_password.replace(" ", "")
+          )
+          server.sendmail(email_pelamar, final_to, msg.as_string())
+          server.quit()
+
+          # Rekap HANYA saat email berhasil dikirim
+          try:
+            payload = {
+                "tanggal": st.session_state.get("tanggal", ""),
+                "perusahaan": st.session_state.get("perusahaan",
