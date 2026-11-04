@@ -26,23 +26,7 @@ st.set_page_config(
     page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
-# Link URL Google Apps Script Web App Anda
-GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
-
-
-# Fungsi Ter-cache agar aplikasi tidak freeze/loading muter lama
-@st.cache_data(ttl=15, show_spinner=False)
-def ambil_data_sheets(url):
-  try:
-    response = requests.get(url, allow_redirects=True, timeout=5)
-    if response.status_code == 200:
-      return response.json()
-  except Exception:
-    return None
-  return None
-
-
-# Session State untuk Preview & Rekap Data
+# Session State untuk Preview & Rekap
 if "pdf_ready" not in st.session_state:
   st.session_state.pdf_ready = False
 if "final_pdf_data" not in st.session_state:
@@ -67,6 +51,9 @@ telepon = "082131009200"
 email_pelamar = "adit.marhaendra@gmail.com"
 pendidikan = "S2 Teknologi Informasi - ISTTS"
 GMAIL_APP_PASSWORD_DEFAULT = "ssav gwlb tjwz exph"
+
+# Link URL Google Apps Script Web App
+GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
 
 
 def dapatkan_html_ttd():
@@ -153,62 +140,64 @@ Hormat saya,
 📞 {telepon} | ✉️ {email_pelamar}
 📍 {alamat_pelamar}"""
 
-      html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        @page {{ size: A4; margin: 15mm 20mm 15mm 20mm; }}
-        body {{ font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.35; color: #000; }}
-        p {{ margin: 6px 0; }}
-        .header {{ text-align: right; margin-bottom: 12px; }}
-        .recipient {{ margin-bottom: 15px; }}
-        .content {{ text-align: justify; }}
-        .bio-table {{ width: 100%; margin-left: 15px; margin-top: 4px; margin-bottom: 8px; }}
-        .bio-table td {{ padding: 1px 0; vertical-align: top; }}
-        .bio-table td.label {{ width: 26%; }}
-        .bio-table td.colon {{ width: 3%; }}
-        ol {{ margin-top: 2px; margin-bottom: 6px; padding-left: 22px; }}
-        ol li {{ padding: 1px 0; }}
-        .signature-table {{ width: 100%; margin-top: 15px; }}
-    </style>
-</head>
-<body>
-    <div class="header">Surabaya, {tanggal}</div>
-    <div class="recipient">Yth. Bapak/Ibu HRD<br><strong>{perusahaan}</strong><br>di {lokasi}</div>
-    <div class="content">
-        <p>Dengan hormat,</p>
-        <p>Berdasarkan informasi lowongan pekerjaan yang saya peroleh, bahwa <strong>{perusahaan}</strong> sedang membuka lowongan pekerjaan. Melalui surat ini saya bermaksud menyampaikan ketertarikan saya untuk melamar pekerjaan pada posisi <strong>{posisi}</strong>.</p>
-        <p>Berikut adalah biodata singkat saya:</p>
-        <table class="bio-table">
-            <tr><td class="label">Nama</td><td class="colon">:</td><td>{nama_pelamar}</td></tr>
-            <tr><td class="label">Pendidikan Terakhir</td><td class="colon">:</td><td>{pendidikan}</td></tr>
-            <tr><td class="label">Alamat Domisili</td><td class="colon">:</td><td>{alamat_pelamar}</td></tr>
-            <tr><td class="label">No. Telepon / WA</td><td class="colon">:</td><td>{telepon}</td></tr>
-            <tr><td class="label">Email</td><td class="colon">:</td><td>{email_pelamar}</td></tr>
-        </table>
-        <p>Saat ini saya dalam kondisi kesehatan yang sangat baik dan siap untuk bekerja keras serta berkontribusi positif bagi perusahaan. Saya memiliki latar belakang pendidikan S2 Teknologi Informasi serta pengalaman kerja lebih dari 8 tahun di bidang IT, SCM, dan Data Control yang saya yakini dapat mendukung kinerja operasional pada posisi tersebut.</p>
-        <p>Sebagai bahan pertimbangan Bapak/Ibu, bersama surat ini turut saya lampirkan:</p>
-        <ol>
-            <li>Curriculum Vitae (CV)</li>
-            <li>Fotokopi Ijazah Terakhir dan Transkrip Nilai</li>
-            <li>Portofolio / Dokumen Pendukung</li>
-            <li>Pasfoto Terbaru</li>
-        </ol>
-        <p>Besar harapan saya agar Bapak/Ibu bersedia meluangkan waktu untuk memberikan kesempatan wawancara. Atas perhatian dan kesempatan yang diberikan, saya ucapkan terima kasih.</p>
-    </div>
-    <table class="signature-table">
-        <tr>
-            <td style="width: 60%;"></td>
-            <td style="width: 40%;">
-                <p style="margin:0;">Hormat saya,</p>
-                {dapatkan_html_ttd()}
-                <p style="text-decoration: underline; font-weight: bold; margin-top: 0;">{nama_pelamar}</p>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>"""
-
+      # A. Generate PDF Surat
+      html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    @page {{ size: A4; margin: 15mm 20mm 15mm 20mm; }}
+                    body {{ font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.35; color: #000; }}
+                    p {{ margin: 6px 0; }}
+                    .header {{ text-align: right; margin-bottom: 12px; }}
+                    .recipient {{ margin-bottom: 15px; }}
+                    .content {{ text-align: justify; }}
+                    .bio-table {{ width: 100%; margin-left: 15px; margin-top: 4px; margin-bottom: 8px; }}
+                    .bio-table td {{ padding: 1px 0; vertical-align: top; }}
+                    .bio-table td.label {{ width: 26%; }}
+                    .bio-table td.colon {{ width: 3%; }}
+                    ol {{ margin-top: 2px; margin-bottom: 6px; padding-left: 22px; }}
+                    ol li {{ padding: 1px 0; }}
+                    .signature-table {{ width: 100%; margin-top: 15px; }}
+                </style>
+            </head>
+            <body>
+                <div class="header">Surabaya, {tanggal}</div>
+                <div class="recipient">Yth. Bapak/Ibu HRD<br><strong>{perusahaan}</strong><br>di {lokasi}</div>
+                <div class="content">
+                    <p>Dengan hormat,</p>
+                    <p>Berdasarkan informasi lowongan pekerjaan yang saya peroleh, bahwa <strong>{perusahaan}</strong> sedang membuka lowongan pekerjaan. Melalui surat ini saya bermaksud menyampaikan ketertarikan saya untuk melamar pekerjaan pada posisi <strong>{posisi}</strong>.</p>
+                    <p>Berikut adalah biodata singkat saya:</p>
+                    <table class="bio-table">
+                        <tr><td class="label">Nama</td><td class="colon">:</td><td>{nama_pelamar}</td></tr>
+                        <tr><td class="label">Pendidikan Terakhir</td><td class="colon">:</td><td>{pendidikan}</td></tr>
+                        <tr><td class="label">Alamat Domisili</td><td class="colon">:</td><td>{alamat_pelamar}</td></tr>
+                        <tr><td class="label">No. Telepon / WA</td><td class="colon">:</td><td>{telepon}</td></tr>
+                        <tr><td class="label">Email</td><td class="colon">:</td><td>{email_pelamar}</td></tr>
+                    </table>
+                    <p>Saat ini saya dalam kondisi kesehatan yang sangat baik dan siap untuk bekerja keras serta berkontribusi positif bagi perusahaan. Saya memiliki latar belakang pendidikan S2 Teknologi Informasi serta pengalaman kerja lebih dari 8 tahun di bidang IT, SCM, dan Data Control yang saya yakini dapat mendukung kinerja operasional pada posisi tersebut.</p>
+                    <p>Sebagai bahan pertimbangan Bapak/Ibu, bersama surat ini turut saya lampirkan:</p>
+                    <ol>
+                        <li>Curriculum Vitae (CV)</li>
+                        <li>Fotokopi Ijazah Terakhir dan Transkrip Nilai</li>
+                        <li>Portofolio / Dokumen Pendukung</li>
+                        <li>Pasfoto Terbaru</li>
+                    </ol>
+                    <p>Besar harapan saya agar Bapak/Ibu bersedia meluangkan waktu untuk memberikan kesempatan wawancara. Atas perhatian dan kesempatan yang diberikan, saya ucapkan terima kasih.</p>
+                </div>
+                <table class="signature-table">
+                    <tr>
+                        <td style="width: 60%;"></td>
+                        <td style="width: 40%;">
+                            <p style="margin:0;">Hormat saya,</p>
+                            {dapatkan_html_ttd()}
+                            <p style="text-decoration: underline; font-weight: bold; margin-top: 0;">{nama_pelamar}</p>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            """
       surat_buffer = BytesIO()
       pisa.CreatePDF(html_content, dest=surat_buffer)
       surat_buffer.seek(0)
@@ -234,7 +223,7 @@ Hormat saya,
 
       nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
 
-      # C. Simpan ke Session State
+      # C. Simpan ke Session State (Tanpa kirim status Draft ke Sheets)
       st.session_state.pdf_ready = True
       st.session_state.final_pdf_data = final_pdf_data
       st.session_state.nama_pdf = nama_pdf
@@ -317,4 +306,54 @@ Hormat saya,
                 "nama_pdf": st.session_state.nama_pdf,
             }
             requests.post(GOOGLE_SHEET_URL, json=payload, timeout=5)
-            st.cache_data
+          except Exception:
+            pass
+
+          st.balloons()
+          st.success(
+              f"🚀 Email & Berkas Lampiran PDF Berhasil Terkirim ke {final_to}!"
+          )
+        except Exception as e:
+          st.error(f"Gagal mengirim email: {e}")
+
+# ================= TAB 2: REKAP DATA FROM GOOGLE SHEETS =================
+with tab2:
+  st.subheader("📊 Histori Lamaran Kerja (Google Sheets)")
+  try:
+    response = requests.get(GOOGLE_SHEET_URL, allow_redirects=True, timeout=10)
+    if response.status_code == 200:
+      try:
+        res = response.json()
+        if isinstance(res, list) and len(res) > 1:
+          df = pd.DataFrame(res[1:], columns=res[0])
+
+          # 1. Filter out 'Draft Prepared' agar tidak ada data ganda
+          if "Status" in df.columns:
+            df = df[df["Status"] != "Draft Prepared"]
+
+          # 2. Format Tanggal agar ringkas (hanya YYYY-MM-DD)
+          if "Tanggal" in df.columns:
+            df["Tanggal"] = df["Tanggal"].astype(str).apply(
+                lambda x: x.split("T")[0] if "T" in x else x
+            )
+
+          st.metric(label="Total Lamaran Terkirim", value=len(df))
+          st.dataframe(df, use_container_width=True)
+        else:
+          st.info(
+              "Belum ada data lamaran yang dibuat di Google Sheets (atau sheet"
+              " masih kosong)."
+          )
+      except Exception:
+        st.error(
+            "⚠️ Akses Google Apps Script ditolak/tidak valid. Pastikan"
+            " aksesibilitas Web App pada Google Apps Script sudah diset ke"
+            " 'Anyone' (Siapa saja)."
+        )
+    else:
+      st.error(
+          f"Gagal terhubung ke Google Sheets (Status HTTP:"
+          f" {response.status_code})."
+      )
+  except Exception as e:
+    st.error(f"Gagal mengambil data rekap dari Google Sheets: {e}")
