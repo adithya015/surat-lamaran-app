@@ -223,7 +223,7 @@ Hormat saya,
 
       nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
 
-      # C. Simpan ke Session State (Tanpa kirim status Draft ke Sheets)
+      # C. Simpan ke Session State
       st.session_state.pdf_ready = True
       st.session_state.final_pdf_data = final_pdf_data
       st.session_state.nama_pdf = nama_pdf
@@ -336,6 +336,10 @@ with tab2:
             df["Tanggal"] = df["Tanggal"].astype(str).apply(
                 lambda x: x.split("T")[0] if "T" in x else x
             )
+
+          # 3. Reset index agar urutan nomor kembali 1, 2, 3, 4, 5...
+          df = df.reset_index(drop=True)
+          df.index = df.index + 1
 
           st.metric(label="Total Lamaran Terkirim", value=len(df))
           st.dataframe(df, use_container_width=True)
