@@ -26,6 +26,22 @@ st.set_page_config(
     page_title="Generator Surat & CV", page_icon="📝", layout="centered"
 )
 
+# Link URL Google Apps Script Web App
+GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
+
+
+# Fungsi Ter-cache agar Tidak Mengunci (Freeze) Halaman Utama saat Loading
+@st.cache_data(ttl=15, show_spinner=False)
+def ambil_data_sheets(url):
+  try:
+    response = requests.get(url, allow_redirects=True, timeout=5)
+    if response.status_code == 200:
+      return response.json()
+  except Exception:
+    return None
+  return None
+
+
 # Session State untuk Preview & Rekap
 if "pdf_ready" not in st.session_state:
   st.session_state.pdf_ready = False
@@ -51,9 +67,6 @@ telepon = "082131009200"
 email_pelamar = "adit.marhaendra@gmail.com"
 pendidikan = "S2 Teknologi Informasi - ISTTS"
 GMAIL_APP_PASSWORD_DEFAULT = "ssav gwlb tjwz exph"
-
-# Link URL Google Apps Script Web App
-GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
 
 
 def dapatkan_html_ttd():
@@ -279,85 +292,4 @@ Hormat saya,
           msg.attach(MIMEText(final_body, "plain"))
 
           part = MIMEBase("application", "octet-stream")
-          part.set_payload(st.session_state.final_pdf_data)
-          encoders.encode_base64(part)
-          part.add_header(
-              "Content-Disposition",
-              f"attachment; filename={st.session_state.nama_pdf}",
-          )
-          msg.attach(part)
-
-          server = smtplib.SMTP("smtp.gmail.com", 587)
-          server.starttls()
-          server.login(
-              email_pelamar, st.session_state.app_password.replace(" ", "")
-          )
-          server.sendmail(email_pelamar, final_to, msg.as_string())
-          server.quit()
-
-          # Rekap HANYA saat email berhasil dikirim
-          try:
-            payload = {
-                "tanggal": st.session_state.get("tanggal", ""),
-                "perusahaan": st.session_state.get("perusahaan", ""),
-                "lokasi": st.session_state.get("lokasi", ""),
-                "posisi": st.session_state.get("posisi", ""),
-                "status": "Terkirim",
-                "nama_pdf": st.session_state.nama_pdf,
-            }
-            requests.post(GOOGLE_SHEET_URL, json=payload, timeout=5)
-          except Exception:
-            pass
-
-          st.balloons()
-          st.success(
-              f"🚀 Email & Berkas Lampiran PDF Berhasil Terkirim ke {final_to}!"
-          )
-        except Exception as e:
-          st.error(f"Gagal mengirim email: {e}")
-
-# ================= TAB 2: REKAP DATA FROM GOOGLE SHEETS =================
-with tab2:
-  st.subheader("📊 Histori Lamaran Kerja (Google Sheets)")
-  try:
-    response = requests.get(GOOGLE_SHEET_URL, allow_redirects=True, timeout=10)
-    if response.status_code == 200:
-      try:
-        res = response.json()
-        if isinstance(res, list) and len(res) > 1:
-          df = pd.DataFrame(res[1:], columns=res[0])
-
-          # 1. Filter out 'Draft Prepared' agar tidak ada data ganda
-          if "Status" in df.columns:
-            df = df[df["Status"] != "Draft Prepared"]
-
-          # 2. Format Tanggal agar ringkas (hanya YYYY-MM-DD)
-          if "Tanggal" in df.columns:
-            df["Tanggal"] = df["Tanggal"].astype(str).apply(
-                lambda x: x.split("T")[0] if "T" in x else x
-            )
-
-          # 3. Reset index agar urutan nomor kembali 1, 2, 3, 4, 5...
-          df = df.reset_index(drop=True)
-          df.index = df.index + 1
-
-          st.metric(label="Total Lamaran Terkirim", value=len(df))
-          st.dataframe(df, use_container_width=True)
-        else:
-          st.info(
-              "Belum ada data lamaran yang dibuat di Google Sheets (atau sheet"
-              " masih kosong)."
-          )
-      except Exception:
-        st.error(
-            "⚠️ Akses Google Apps Script ditolak/tidak valid. Pastikan"
-            " aksesibilitas Web App pada Google Apps Script sudah diset ke"
-            " 'Anyone' (Siapa saja)."
-        )
-    else:
-      st.error(
-          f"Gagal terhubung ke Google Sheets (Status HTTP:"
-          f" {response.status_code})."
-      )
-  except Exception as e:
-    st.error(f"Gagal mengambil data rekap dari Google Sheets: {e}")
+          part.set_
