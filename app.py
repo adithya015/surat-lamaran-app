@@ -52,7 +52,7 @@ email_pelamar = "adit.marhaendra@gmail.com"
 pendidikan = "S2 Teknologi Informasi - ISTTS"
 GMAIL_APP_PASSWORD_DEFAULT = "ssav gwlb tjwz exph"
 
-# Link URL Google Apps Script Web App milik Anda
+# Link URL Google Apps Script Web App
 GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwldQWOaFEj_eASZ7tRrYkBfA5hZkAblfB6S4Z7PKFFqCukEpOD0ZBTOwMNLFUazruJBw/exec"
 
 
@@ -223,21 +223,7 @@ Hormat saya,
 
       nama_pdf = f"Surat_Lamaran_dan_CV_{perusahaan.replace(' ', '_')}.pdf"
 
-      # C. Simpan ke Google Sheets Online
-      try:
-        payload = {
-            "tanggal": tanggal,
-            "perusahaan": perusahaan,
-            "lokasi": lokasi,
-            "posisi": posisi,
-            "status": "Draft Prepared",
-            "nama_pdf": nama_pdf,
-        }
-        requests.post(GOOGLE_SHEET_URL, json=payload, timeout=5)
-      except Exception:
-        pass
-
-      # D. Simpan ke Session State
+      # C. Simpan ke Session State (Tanpa kirim status Draft ke Sheets)
       st.session_state.pdf_ready = True
       st.session_state.final_pdf_data = final_pdf_data
       st.session_state.nama_pdf = nama_pdf
@@ -309,7 +295,7 @@ Hormat saya,
           server.sendmail(email_pelamar, final_to, msg.as_string())
           server.quit()
 
-          # Update Status di Google Sheet menjadi Terkirim
+          # Rekap HANYA saat email berhasil dikirim
           try:
             payload = {
                 "tanggal": st.session_state.get("tanggal", ""),
@@ -340,7 +326,18 @@ with tab2:
         res = response.json()
         if isinstance(res, list) and len(res) > 1:
           df = pd.DataFrame(res[1:], columns=res[0])
-          st.metric(label="Total Lamaran Dibuat", value=len(df))
+
+          # 1. Filter out 'Draft Prepared' agar tidak ada data ganda
+          if "Status" in df.columns:
+            df = df[df["Status"] != "Draft Prepared"]
+
+          # 2. Format Tanggal agar ringkas (hanya YYYY-MM-DD)
+          if "Tanggal" in df.columns:
+            df["Tanggal"] = df["Tanggal"].astype(str).apply(
+                lambda x: x.split("T")[0] if "T" in x else x
+            )
+
+          st.metric(label="Total Lamaran Terkirim", value=len(df))
           st.dataframe(df, use_container_width=True)
         else:
           st.info(
